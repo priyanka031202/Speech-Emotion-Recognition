@@ -8,7 +8,7 @@ import joblib
 # Load model and preprocessing tools
 @st.cache_resource
 def load_model():
-    model = tf.keras.models.load_model("best_model.h5")
+    model = tf.keras.models.load_model("model.h5")
     scaler = joblib.load("scaler.pkl")
     encoder = joblib.load("label_encoder.pkl")
     return model, scaler, encoder
