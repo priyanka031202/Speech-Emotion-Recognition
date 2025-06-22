@@ -7,8 +7,6 @@ import tensorflow as tf
 import joblib
 import tempfile
 import os
-import io
-import ffmpeg
 
 # Load model and preprocessing tools
 @st.cache_resource
@@ -19,26 +17,6 @@ def load_model():
     return model, scaler, encoder
 
 model, scaler, encoder = load_model()
-
-# Convert any audio file to WAV using ffmpeg
-def convert_to_wav(uploaded_file):
-    input_bytes = uploaded_file.read()
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_wav:
-        output_path = temp_wav.name
-
-    try:
-        (
-            ffmpeg
-            .input('pipe:0')
-            .output(output_path, format='wav')
-            .overwrite_output()
-            .run(input=input_bytes)
-        )
-    except ffmpeg.Error:
-        st.error("FFmpeg failed to convert the file. Please try another format.")
-        st.stop()
-
-    return output_path
 
 # Extract audio features
 def extract_features(data, sample_rate):
@@ -82,7 +60,7 @@ def predict_emotion(audio_file_path):
         features = extract_features(data, sr)
 
         if features.shape[0] != 197:
-            return "Feature size mismatch. Got {} features.".format(features.shape[0]), None, None
+            return f"Feature size mismatch. Got {features.shape[0]} features.", None, None
 
         features = scaler.transform(features.reshape(1, -1))
         features = np.expand_dims(features, axis=2)
@@ -92,7 +70,7 @@ def predict_emotion(audio_file_path):
     except Exception as e:
         return f"Error: {e}", None, None
 
-# Emotion emoji dictionary
+# Emoji dictionary
 emoji_dict = {
     'angry': '😠',
     'happy': '😊',
@@ -106,25 +84,27 @@ emoji_dict = {
 
 # Streamlit UI
 st.title("🎤 Speech Emotion Recognition")
-st.write("Upload an audio file (`wav`, `mp3`, `ogg`, `flac`, `m4a`) to predict the emotion.")
+st.write("Upload an audio file (`.wav`, `.mp3`, `.ogg`, `.flac`, `.m4a`) to predict the emotion.")
 
 uploaded_file = st.file_uploader("Choose an audio file", type=["wav", "mp3", "ogg", "flac", "m4a"])
 
 if uploaded_file is not None:
     st.audio(uploaded_file)
 
-    # Convert uploaded file to WAV
-    temp_path = convert_to_wav(uploaded_file)
+    # Save uploaded file to a temporary path
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".audio") as temp_audio:
+        temp_audio.write(uploaded_file.read())
+        temp_path = temp_audio.name
 
-    # Predict emotion
+    # Predict
     result, audio_data, sr = predict_emotion(temp_path)
-    os.remove(temp_path)  # clean up
+    os.remove(temp_path)
 
     if audio_data is not None:
         emoji = emoji_dict.get(result.lower(), "🎭")
-        st.markdown(f"### 🎯 Predicted Emotion: **{result}** {emoji}")
+        st.markdown(f"###  Predicted Emotion: **{result}** {emoji}")
 
-        # Display mel spectrogram
+        # Plot mel spectrogram
         fig, ax = plt.subplots(figsize=(10, 4))
         S = librosa.feature.melspectrogram(y=audio_data, sr=sr, n_mels=128)
         S_DB = librosa.power_to_db(S, ref=np.max)
