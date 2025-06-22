@@ -8,6 +8,7 @@ import joblib
 from pydub import AudioSegment
 import tempfile
 import os
+import io
 
 #  Load model and preprocessing tools
 @st.cache_resource
