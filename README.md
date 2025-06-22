@@ -53,11 +53,17 @@ Data augmentation helps solve this by creating more variety in the training data
 
   The extracted features were scaled using a Standard Scaler, and labels were encoded using a Label Encoder. The model was then trained on this processed data to learn patterns related to different emotions in      speech. Once trained, the model was saved in .h5 format and later used in a Streamlit web app for live predictions.
 
-  after traning the data
+# After traning the data
   ![image](https://github.com/user-attachments/assets/455cdfbb-cbc4-47bf-aeda-0e92d5806b43) ## This is the confusion matrix
+  
+  
   ![image](https://github.com/user-attachments/assets/743ce796-7258-4555-8321-1ca018fdaa12) ## Report
+  
+  
   ![image](https://github.com/user-attachments/assets/3b58f684-cd73-4b13-ab80-227e804c16a4) ## overall accuracy
-  ![image](https://github.com/user-attachments/assets/d0afe755-6f06-447a-9d10-0df3ca40b34b) #3 overall F1 score amd accuracy per class
+
+  
+  ![image](https://github.com/user-attachments/assets/d0afe755-6f06-447a-9d10-0df3ca40b34b) ## overall F1 score amd accuracy per class
 
 
 
