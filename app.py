@@ -5,6 +5,9 @@ import librosa.display
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import joblib
+from pydub import AudioSegment
+import tempfile
+import os
 
 #  Load model and preprocessing tools
 @st.cache_resource
@@ -52,13 +55,13 @@ def extract_features(data, sample_rate):
     return result
 
 #  Emotion prediction function
-def predict_emotion(audio_file):
+def predict_emotion(audio_file_path):
     try:
-        data, sr = librosa.load(audio_file, duration=2.5, offset=0.6)
+        data, sr = librosa.load(audio_file_path, duration=2.5, offset=0.6)
         features = extract_features(data, sr)
 
         if features.shape[0] != 197:
-            return "Feature size mismatch. Got {} features.".format(features.shape[0])
+            return "Feature size mismatch. Got {} features.".format(features.shape[0]), None, None
 
         features = scaler.transform(features.reshape(1, -1))
         features = np.expand_dims(features, axis=2)
@@ -82,19 +85,25 @@ emoji_dict = {
 
 #  Streamlit UI
 st.title("🎤 Speech Emotion Recognition")
-st.write("Upload a `.wav` audio file to predict the emotion expressed.")
+st.write("Upload an audio file (`wav`, `mp3`, `ogg`, `flac`, `m4a`) to predict the emotion expressed.")
 
-uploaded_file = st.file_uploader("Choose an audio file", type=["wav"])
+uploaded_file = st.file_uploader("Choose an audio file", type=["wav", "mp3", "ogg", "flac", "m4a"])
 if uploaded_file is not None:
-    with open("temp.wav", "wb") as f:
-        f.write(uploaded_file.getbuffer())
+    # Convert to WAV using pydub if not already
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_wav:
+        file_bytes = uploaded_file.read()
+        audio = AudioSegment.from_file(io.BytesIO(file_bytes))
+        audio.export(temp_wav.name, format="wav")
+        temp_path = temp_wav.name
 
-    st.audio(uploaded_file, format="audio/wav")
+    st.audio(uploaded_file)
 
-    result, audio_data, sr = predict_emotion("temp.wav")
+    result, audio_data, sr = predict_emotion(temp_path)
+    os.remove(temp_path)  
+
     if audio_data is not None:
         emoji = emoji_dict.get(result.lower(), "🎭")
-        st.markdown(f"### 🎯 Predicted Emotion: **{result}** {emoji}")
+        st.markdown(f"###  Predicted Emotion: **{result}** {emoji}")
 
         #  Display spectrogram
         fig, ax = plt.subplots(figsize=(10, 4))
