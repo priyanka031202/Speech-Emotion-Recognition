@@ -5,18 +5,12 @@ import librosa.display
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import joblib
-from pydub import AudioSegment
-from pydub.utils import which
 import tempfile
 import os
 import io
+import ffmpeg
 
-
-AudioSegment.converter = which("ffmpeg")
-AudioSegment.ffprobe = which("ffprobe")
-
-
-#  Load model and preprocessing tools
+# Load model and preprocessing tools
 @st.cache_resource
 def load_model():
     model = tf.keras.models.load_model("model.h5")
@@ -26,7 +20,27 @@ def load_model():
 
 model, scaler, encoder = load_model()
 
-#  Extract audio features
+# Convert any audio file to WAV using ffmpeg
+def convert_to_wav(uploaded_file):
+    input_bytes = uploaded_file.read()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_wav:
+        output_path = temp_wav.name
+
+    try:
+        (
+            ffmpeg
+            .input('pipe:0')
+            .output(output_path, format='wav')
+            .overwrite_output()
+            .run(input=input_bytes)
+        )
+    except ffmpeg.Error:
+        st.error("FFmpeg failed to convert the file. Please try another format.")
+        st.stop()
+
+    return output_path
+
+# Extract audio features
 def extract_features(data, sample_rate):
     result = np.array([])
     data, _ = librosa.effects.trim(data)
@@ -61,7 +75,7 @@ def extract_features(data, sample_rate):
 
     return result
 
-#  Emotion prediction function
+# Predict emotion
 def predict_emotion(audio_file_path):
     try:
         data, sr = librosa.load(audio_file_path, duration=2.5, offset=0.6)
@@ -78,7 +92,7 @@ def predict_emotion(audio_file_path):
     except Exception as e:
         return f"Error: {e}", None, None
 
-#  Emojis for emotions
+# Emotion emoji dictionary
 emoji_dict = {
     'angry': '😠',
     'happy': '😊',
@@ -90,29 +104,27 @@ emoji_dict = {
     'calm': '😌'
 }
 
-#  Streamlit UI
+# Streamlit UI
 st.title("🎤 Speech Emotion Recognition")
-st.write("Upload an audio file (`wav`, `mp3`, `ogg`, `flac`, `m4a`) to predict the emotion expressed.")
+st.write("Upload an audio file (`wav`, `mp3`, `ogg`, `flac`, `m4a`) to predict the emotion.")
 
 uploaded_file = st.file_uploader("Choose an audio file", type=["wav", "mp3", "ogg", "flac", "m4a"])
-if uploaded_file is not None:
-    # Convert to WAV using pydub if not already
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_wav:
-        file_bytes = uploaded_file.read()
-        audio = AudioSegment.from_file(io.BytesIO(file_bytes))
-        audio.export(temp_wav.name, format="wav")
-        temp_path = temp_wav.name
 
+if uploaded_file is not None:
     st.audio(uploaded_file)
 
+    # Convert uploaded file to WAV
+    temp_path = convert_to_wav(uploaded_file)
+
+    # Predict emotion
     result, audio_data, sr = predict_emotion(temp_path)
-    os.remove(temp_path)  
+    os.remove(temp_path)  # clean up
 
     if audio_data is not None:
         emoji = emoji_dict.get(result.lower(), "🎭")
-        st.markdown(f"###  Predicted Emotion: **{result}** {emoji}")
+        st.markdown(f"### 🎯 Predicted Emotion: **{result}** {emoji}")
 
-        #  Display spectrogram
+        # Display mel spectrogram
         fig, ax = plt.subplots(figsize=(10, 4))
         S = librosa.feature.melspectrogram(y=audio_data, sr=sr, n_mels=128)
         S_DB = librosa.power_to_db(S, ref=np.max)
