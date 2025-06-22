@@ -6,9 +6,15 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import joblib
 from pydub import AudioSegment
+from pydub.utils import which
 import tempfile
 import os
 import io
+
+
+AudioSegment.converter = which("ffmpeg")
+AudioSegment.ffprobe = which("ffprobe")
+
 
 #  Load model and preprocessing tools
 @st.cache_resource
