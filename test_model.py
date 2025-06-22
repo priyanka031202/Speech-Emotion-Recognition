@@ -5,7 +5,7 @@ import tensorflow as tf
 import joblib
 import os
 
-# ===== Load the saved model, scaler, and label encoder =====
+
 MODEL_PATH = "models/model.h5"
 SCALER_PATH = "models/scaler.pkl"
 ENCODER_PATH = "models/label_encoder.pkl"
@@ -14,7 +14,7 @@ model = tf.keras.models.load_model(MODEL_PATH)
 scaler = joblib.load(SCALER_PATH)
 encoder = joblib.load(ENCODER_PATH)
 
-# ===== Feature Extraction Function =====
+
 def extract_features(data, sample_rate):
     result = np.array([])
     data, _ = librosa.effects.trim(data)
@@ -39,7 +39,7 @@ def extract_features(data, sample_rate):
     result = np.hstack((result, tonnetz))
     return result
 
-# ===== Predict Emotion Function =====
+
 def predict_emotion(audio_path):
     try:
         print(f"\n Processing: {audio_path}")
@@ -59,9 +59,9 @@ def predict_emotion(audio_path):
         print(f" Error during prediction: {e}")
         return None
 
-# ===== Run Prediction =====
+
 if __name__ == "__main__":
-    test_audio_path = "test.wav"  # Replace with your audio file path
+    test_audio_path = "test.wav" 
     if os.path.exists(test_audio_path):
         predict_emotion(test_audio_path)
     else:
